@@ -95,6 +95,7 @@ const config: Config = {
           title: 'GUIDES',
           items: [
             {label: 'Getting Started', to: '/docs/guides/getting-started'},
+            {label: 'Claude Code Plugin', to: '/docs/guides/claude-code-plugin'},
             {label: 'CLI Reference', to: '/docs/guides/cli-reference'},
             {label: 'Configuration', to: '/docs/guides/configuration'},
           ],

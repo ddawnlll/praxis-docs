@@ -128,6 +128,7 @@ Then let the agent fix only the failures and re-verify.
 
 ## Next Steps
 
+- **[Claude Code Plugin](/docs/guides/claude-code-plugin)** — Use PRAXIS from within Claude Code
 - **[Architecture](/docs/architecture)** — How the three gates work
 - **[CLI Reference](/docs/guides/cli-reference)** — All commands and flags
 - **[Getting Started Guide](/docs/guides/getting-started)** — Deeper walkthrough with examples

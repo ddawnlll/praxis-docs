@@ -22,6 +22,7 @@ const sidebars: SidebarsConfig = {
       label: 'Guides',
       items: [
         'guides/getting-started',
+        'guides/claude-code-plugin',
         'guides/cli-reference',
         'guides/configuration',
       ],
