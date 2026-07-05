@@ -2,7 +2,7 @@
 id: introduction
 title: Introduction
 description: Welcome to PRAXIS — the parallel runtime for autonomous AI coding execution.
-slug: /
+slug: /introduction
 ---
 
 # Welcome to PRAXIS 🚀

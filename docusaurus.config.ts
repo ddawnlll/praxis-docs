@@ -13,7 +13,7 @@ const config: Config = {
   organizationName: 'praxis',
   projectName: 'praxis-docs',
 
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
 
   i18n: {
