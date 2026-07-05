@@ -1,0 +1,128 @@
+---
+slug: accp-protocol
+title: The ACCP Protocol — Compiling Agent Work Into Verifiable Artifacts
+authors: [ddawnlll]
+tags: [accp, architecture, protocol, verification]
+description: How the Autonomous Coding Compiler Protocol generates Final Verification Reports and Phase Review Reports without blocking execution.
+---
+
+# The ACCP Protocol
+
+The Autonomous Coding Compiler Protocol (ACCP) is PRAXIS's answer to a hard question: **how do you turn agent execution into permanent, verifiable artifacts without slowing down the work?**
+
+The answer is: **run it async, never block the critical path, and keep it separate from the Truth Engine.**
+
+<!-- truncate -->
+
+## Why ACCP Exists
+
+When an agent finishes a task, you need more than just a PASS/FAIL verdict. You need:
+
+- A **Final Verification Report (FVR)** that documents every attempt, every gate result, and every piece of evidence
+- A **Phase Review Report (PRR)** that summarizes an entire wave of work — multiple tasks, multiple workers
+
+These artifacts are essential for audit, compliance, and human review. But they shouldn't slow down execution. If artifact generation fails, the task should still be complete. The work should never wait for the paperwork.
+
+## The Architecture
+
+ACCP follows a strict **async, non-blocking** pipeline:
+
+```text
+Execution Critical Path
+┌──────────────────────────────────┐
+│ ADMIT → EXECUTE → CAPTURE →     │
+│ VERIFY → ASSEMBLE → COMPLETE    │
+└──────────────────┬───────────────┘
+                   │ TaskRun/Wave COMPLETE
+                   │ Enqueue artifact job (non-blocking)
+                   ▼
+┌──────────────────────────────────┐
+│       ACCP Async Job Queue       │
+│                                  │
+│  ┌──────────┐  ┌──────────┐     │
+│  │ FVR Job  │  │ PRR Job  │     │
+│  │ per Task │  │ per Wave │     │
+│  └────┬─────┘  └────┬─────┘     │
+│       │              │           │
+│       ▼              ▼           │
+│  ┌──────────────────────────┐   │
+│  │    ACCP Compiler         │   │
+│  │  (kernel/accp)           │   │
+│  └──────────┬───────────────┘   │
+│             │                    │
+│             ▼                    │
+│  ┌──────────────────────────┐   │
+│  │    Artifact Storage      │   │
+│  │  (DB → Mission Control)  │   │
+│  └──────────────────────────┘   │
+└──────────────────────────────────┘
+```
+
+The key principle: **the arrow from execution to artifact generation is one-directional.** Execution never waits for ACCP. ACCP failure never rolls back execution verdicts.
+
+## FVR — Final Verification Report
+
+Every TaskRun that reaches COMPLETE gets an FVR. It contains:
+
+| Section | Content |
+|---------|---------|
+| Task metadata | task_id, plan_id, wave, namespace, task_type |
+| Attempt history | All attempts with gate verdicts, timestamps, strategy used |
+| Acceptance criteria | All criteria with PASS/FAIL per criterion |
+| Evidence summary | Evidence record count, chain status, divergence flags |
+| Final verdict | COMPLETE (FinalGate PASS), with timestamp |
+| Repair history | Any HOLD/FAIL attempts, what was repaired, how |
+
+The FVR is enqueued the moment a TaskRun transitions to COMPLETE. The execution pipeline doesn't wait for it — the artifact is compiled asynchronously and surfaced in Desktop Mission Control when ready.
+
+## PRR — Phase Review Report
+
+Every wave that reaches terminal state gets a PRR. It contains:
+
+| Section | Content |
+|---------|---------|
+| Wave metadata | wave_id, plan_id, task count, worker count |
+| Task summaries | Per-task final status, attempt count, strategy history |
+| Assembly result | Assembly success or ConflictReport summary |
+| Timeline | Start-to-finish timeline with key events |
+| Metrics | Duration, total attempts, repair count, failure rate |
+
+The PRR gives a bird's-eye view of a phase of work — what was attempted, what succeeded, what had to be repaired, and how long it all took.
+
+## The ACCP Compiler
+
+The ACCP compiler (`kernel/accp`) is a port from the original `pi/packages/accp-compiler`. It has three responsibilities:
+
+1. **Compile** evidence and verdict data into structured reports
+2. **Validate** evidence completeness — are all required evidence types present?
+3. **Document** — never evaluate truth
+
+This last point is critical: **the ACCP compiler is not the Truth Engine.** The Truth Engine produces completion verdicts. The ACCP compiler produces documentation. They are separate systems with separate responsibilities, and they stay that way.
+
+## Key Design Decisions
+
+### JSONL for Evidence, Not YAML
+
+Evidence capture is fundamentally append-only streaming. YAML's complexity (anchors, multi-line, indentation) adds no value for records that are never hand-edited. JSONL gives us:
+- Deterministic append
+- Trivial line-based tailing
+- Standard JSON parsing for each record
+- Native streaming support in Node.js
+
+### Async and Non-Blocking
+
+The must/must-not rules are strict:
+- ACCP artifact generation **MUST** be async and non-blocking
+- Execution **MUST NOT** wait for ACCP artifact completion
+- Artifact failure **MUST NOT** fail the TaskRun
+- Artifacts **MUST** be surfaced in Desktop Mission Control
+
+### Compiler Is Not the Truth Engine
+
+This separation prevents a dangerous coupling. The Truth Engine evaluates completion. The ACCP compiler documents it. They have different failure modes, different performance characteristics, and different trust models.
+
+## Current Status
+
+ACCP is fully designed as part of the remaining MVP architecture pack (P3–P6). The compiler is specified to be ported from `pi/packages/accp-compiler` in P0.3. FVR and PRR are the only report types in the MVP — we are deliberately not expanding the report catalog until evidence from real usage shows a need.
+
+The protocol exists to answer one question that stays relevant long after execution finishes: **what actually happened?**

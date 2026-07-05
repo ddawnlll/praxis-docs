@@ -1,0 +1,126 @@
+---
+slug: problems-building-praxis
+title: Problems We Faced Building PRAXIS — The Hard Lessons
+authors: [ddawnlll]
+tags: [praxis, engineering, lessons, design]
+description: The real challenges we encountered designing PRAXIS — overambitious scope, market shifts, false-done detection, and knowing when to throw away work.
+---
+
+# Problems We Faced Building PRAXIS
+
+Every project has hard problems. PRAXIS had some doozies.
+
+Some we solved. Some we're still wrestling with. Some we realized were the wrong problems entirely and had to walk away from.
+
+Here are the real ones.
+
+<!-- truncate -->
+
+## 1. We Designed Too Much Too Early
+
+The original PRAXIS architecture was beautiful. It had everything:
+
+- Desktop Mission Control with Electron + React
+- Local HTTP+SSE server with Hono
+- PostgreSQL event log for persistent state
+- Multi-worker scheduling with Governor tiers
+- `stable_16` concurrency model
+- Deterministic Assembler for parallel merge
+- Wave scheduler for orchestration
+- Circuit breaker for admission control
+
+We had ADRs for all of it. We had diagrams. We had package names. We had a phase map that stretched out for months.
+
+**The problem:** none of it was validated against real usage. We were designing infrastructure for a problem we hadn't proven existed in the form we imagined.
+
+**The lesson:** Start with the kernel. Prove the core hypothesis before building the city around it. Infrastructure is expensive to build and even more expensive to undo when you discover the core hypothesis needs to change.
+
+## 2. The Market Shifted Under Us
+
+While we were designing desktop Mission Control, the coding agent landscape changed dramatically:
+
+- Claude Code matured into a production-ready tool
+- MiMo Code launched with strong adoption
+- OpenCode went open source with a growing community
+- Multiple other agent tools entered the space
+
+These tools already solved the "run a coding agent in your terminal" problem — and they solved it well. Competing on that axis would have been a mistake.
+
+**The hard realization:** The market doesn't care about your elegant architecture if it's solving a problem that's already solved. The question shifted from "how do we build a better agent?" to **"what unique value does PRAXIS provide?"**
+
+The answer — independent verification of agent claims — was hiding in plain sight the whole time.
+
+## 3. The False-Done Problem Is Harder Than It Sounds
+
+"False done" — when an agent reports completion but hasn't actually finished — sounds easy to detect. Just check the diff, right?
+
+It's not that simple:
+
+- An agent can produce a non-empty diff that doesn't satisfy the acceptance criteria
+- An agent can claim "all tests pass" without ever running the test suite
+- An agent can modify files that should be out of bounds
+- An agent can report success for a command that never executed
+- An agent can fabricate evidence that looks plausible
+
+Building gates that catch these cases without producing false positives of their own is a **genuinely hard engineering problem.**
+
+EvidenceGate checks that evidence exists and is trustworthy. ExecGate checks that commands actually ran. FinalGate checks that results meet human criteria. Each gate has a specific job and specific failure modes — and keeping them separate required multiple design iterations.
+
+## 4. The Pivot Was Painful
+
+ADR-013 was the hardest document we've written.
+
+It meant:
+- Killing months of design work (MVP-A/B/C staging, Desktop Mission Control, server architecture)
+- Reclassifying dozens of design decisions to "future scope"
+- Admitting that the original direction was wrong
+- Starting over with a smaller, more focused product
+
+**The emotional challenge:** It's hard to throw away work. The desktop-first architecture had been reviewed, approved, and documented. Walking away from it felt like failure.
+
+**The rational reality:** It wasn't failure — it was learning. The desktop-first architecture taught us what PRAXIS was NOT. The pivot focused us on what PRAXIS actually IS: a Truth Kernel, not an orchestrator.
+
+We kept the Three Laws. We kept the Truth Engine. We kept human-authored acceptance criteria. We threw away everything that distracted from the core verification loop.
+
+## 5. Design vs. Implementation Tension
+
+PRAXIS v0.1 is currently at ~45% design complete (D0-D1) and **0% implementation complete**. This creates a specific kind of tension:
+
+- Designs are clean and elegant on paper
+- Reality is messy and full of edge cases
+- We know some assumptions will break on first contact with real code
+- But we also know that starting implementation too early leads to churn
+
+**The open problem:** When do you stop designing and start building? For PRAXIS, the answer is when the design pack is complete through P6 (FinalGate + Repair + Reports + CLI + Plugin). The remaining design work is ~55% of the total, and every component is specified to contract level.
+
+## 6. The "Bitti mi gerçekten?" Question Never Gets Old
+
+The Turkish phrase that became PRAXIS's internal motto — **"Bitti mi gerçekten?"** (Did it actually finish?) — turned out to be the hardest question to answer truthfully.
+
+Not because verification is technically impossible. But because **agents are designed to sound confident.** They say "done" with conviction. They produce plausible-looking diffs. They describe passing tests that never ran.
+
+Building a system that treats every agent claim as potentially false — and demands proof — requires a fundamentally different mindset than building a system that trusts the agent.
+
+That mindset shift — from "trust the agent" to **"verify the evidence"** — is the hardest problem PRAXIS solves. And it's not a technical problem. It's a design philosophy problem.
+
+## What We'd Do Differently
+
+1. **Start with the kernel, not the infrastructure.** The Truth Engine is the product. Everything else is distribution.
+2. **Validate the core hypothesis faster.** We spent too long designing around assumptions that turned out to be wrong.
+3. **Pivot sooner.** The signs were there before ADR-013. We could have saved weeks of work.
+4. **Keep the scope smaller.** Each "future scope" item in the original design was a distraction from proving the core model.
+
+## What We Got Right
+
+1. **The Three Laws.** They survived the pivot intact. They're the right foundation.
+2. **Human-authored acceptance criteria.** This is the non-negotiable that prevents the echo chamber problem.
+3. **Evidence-based verification.** Agent claims are not evidence. This distinction is everything.
+4. **The plugin-first model.** It proved the kernel with real sessions immediately, without building infrastructure first.
+
+## Where We Are Now
+
+The remaining MVP architecture (P3–P6) is design-complete. The next step is Truth Kernel Proof Design (D2), followed by Claude Code Plugin Spike Spec (D3), followed by Final Design Lock Audit (D4).
+
+Implementation is not authorized until D4 passes.
+
+That's deliberate. We learned our lesson about building before validating.

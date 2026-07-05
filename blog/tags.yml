@@ -1,19 +1,44 @@
-facebook:
-  label: Facebook
-  permalink: /facebook
-  description: Facebook tag description
+praxis:
+  label: PRAXIS
+  permalink: /praxis
+  description: PRAXIS Truth Kernel
 
-hello:
-  label: Hello
-  permalink: /hello
-  description: Hello tag description
+architecture:
+  label: Architecture
+  permalink: /architecture
+  description: PRAXIS Architecture
 
-docusaurus:
-  label: Docusaurus
-  permalink: /docusaurus
-  description: Docusaurus tag description
+design:
+  label: Design
+  permalink: /design
+  description: PRAXIS Design
 
-hola:
-  label: Hola
-  permalink: /hola
-  description: Hola tag description
+pivot:
+  label: Plugin-First Pivot
+  permalink: /pivot
+  description: Plugin-First Pivot
+
+accp:
+  label: ACCP
+  permalink: /accp
+  description: ACCP Protocol
+
+protocol:
+  label: Protocol
+  permalink: /protocol
+  description: Protocol Design
+
+verification:
+  label: Verification
+  permalink: /verification
+  description: Verification
+
+engineering:
+  label: Engineering
+  permalink: /engineering
+  description: Engineering
+
+lessons:
+  label: Lessons
+  permalink: /lessons
+  description: Lessons Learned

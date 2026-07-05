@@ -1,0 +1,88 @@
+---
+slug: how-we-built-praxis
+title: How We Built PRAXIS — From Desktop Orchestrator to Truth Kernel
+authors: [ddawnlll]
+tags: [praxis, architecture, design, pivot]
+description: The story of PRAXIS — how a desktop-first multi-agent orchestrator became a local Truth Kernel for agentic coding tools.
+---
+
+# How We Built PRAXIS
+
+PRAXIS didn't start as a Truth Kernel. It started as something much bigger — and much more wrong.
+
+This is the story of how we discovered that our real problem wasn't "how do we run agents?" but **"how do we know they actually finished?"**
+
+<!-- truncate -->
+
+## Act 1: The Desktop-First Dream
+
+The original PRAXIS was designed as a **desktop-first multi-agent coding orchestrator**. The vision was ambitious:
+
+- An Electron-based Desktop Mission Control
+- A local HTTP+SSE server backend
+- A PostgreSQL event log for persistent state
+- Multi-worker scheduling with Governor tiers up to `stable_16`
+- A Deterministic Assembler for merging parallel worker outputs
+- A full runtime event-sourcing model
+
+We had it all planned out. MVP-A was a desktop mockup. MVP-B would wire up a single real Claude Code worker. MVP-C would scale to three parallel workers. The architecture was documented, the design decisions were locked, and the packages were scaffolded.
+
+## Act 2: The Landscape Shift
+
+While we were designing, the world changed.
+
+**Claude Code, MiMo Code, and OpenCode** matured rapidly. These tools already covered the agent harness / terminal coding workflow layer exceptionally well. They were well-funded, actively developed, and solving real problems for developers.
+
+We asked ourselves a hard question: **"If someone already has Claude Code, why would they use PRAXIS?"**
+
+The answer was uncomfortable. Competing by building another terminal-native coding agent was a losing strategy. The market already had multiple mature options. Our original "unique value" wasn't in running agents — it was in something else entirely.
+
+## Act 3: The Question That Changed Everything
+
+We kept coming back to one question:
+
+> **"Bitti mi gerçekten?"** (Turkish for "Did it actually finish?")
+
+Every developer who works with AI coding agents knows this feeling. The agent says "done" but you're not sure. You check the diff. You run the tests yourself. You scroll through the conversation history looking for proof.
+
+The agent **reports** completion, but does that mean it actually **completed** the task?
+
+This was the real problem. And no existing tool was solving it.
+
+- **False done** — Agent says "done" but the diff is empty
+- **Echo chamber** — Agent writes the acceptance criteria AND passes them
+- **Missing evidence** — Agent claims tests passed but never ran them
+- **Self-reported truth** — The agent's own status messages treated as completion
+- **Scattered verification** — Evidence spread across messages, files, and terminal output
+
+## Act 4: The Pivot
+
+On June 18, 2026, we made the call. ADR-013 documented the **Plugin-First Pivot**:
+
+> **PRAXIS is not a coding agent. PRAXIS is a local Truth Kernel for agentic coding tools.**
+
+Everything changed. The desktop app became future scope. The PostgreSQL event log became future scope. The multi-worker orchestration became future scope.
+
+What stayed?
+
+- **The Three Laws** — Completion Authority, Write Authority, Verification Authority
+- **The Truth Engine** — EvidenceGate, ExecGate, FinalGate
+- **Human-authored acceptance criteria** — Agents don't define their own completion
+- **Evidence-based verification** — Claims must have proof
+
+And what became v0.1 was much simpler:
+
+1. **`praxis` CLI** — Six commands: `init`, `spec`, `verify`, `repair`, `status`, `report`
+2. **Local Truth Kernel** — Three gates, evidence collection, repair packets
+3. **Claude Code plugin** — Six slash commands that call the CLI
+4. **`.praxis/` workspace** — `task.yaml`, `evidence/*.jsonl`, `reports/*.md`
+
+## Act 5: Where We Are Now
+
+As of today, PRAXIS is **design-complete** for the remaining MVP architecture (P3–P6). The design pack includes full specifications for EvidenceGate, EvidenceLedger, WiringGate, ExecGate, FinalGate, RepairPacket, report model, CLI workflow, and plugin bridge.
+
+**The Three Laws are preserved. The core pain point is real. The solution is focused.**
+
+PRAXIS doesn't compete with coding agents. It sits above them and answers one question: **did the agent actually do what it claimed?**
+
+That question doesn't go away, no matter which agent you use. And that's why PRAXIS exists.
