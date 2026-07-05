@@ -1,64 +1,95 @@
 ---
 id: introduction
 title: Introduction
-description: Welcome to PRAXIS — the parallel runtime for autonomous AI coding execution.
+description: PRAXIS is a local Truth Kernel for agentic coding tools. It verifies whether the agent actually completed the task.
 slug: /introduction
 ---
 
-# Welcome to PRAXIS 🚀
+# What Is PRAXIS?
 
-PRAXIS is a **parallel runtime for autonomous AI coding execution** — a verification-first platform that ensures AI agents actually complete the tasks they claim to finish.
+**PRAXIS is a local Truth Kernel for agentic coding tools.** It verifies coding-agent outputs using human-approved acceptance criteria, local evidence, deterministic gates, and repair packets.
 
-## Why PRAXIS?
+**PRAXIS is not a coding agent.** It does not write code. It does not compete with Claude Code, OpenCode, or any coding agent. **It sits above them** and answers one question: *did the agent actually do what it claimed?*
 
-AI coding agents are powerful, but they're also unreliable. Agents say "done" when they're not, hallucinate results, and leave broken code behind. **PRAXIS solves this** by introducing a verification layer that checks every claim against hard evidence.
+## The Problem
 
-### The Core Problem
+AI coding agents are powerful but unreliable completion reporters.
 
-```text
-Agent says "done" → But is it REALLY done?
+| Problem | Symptom |
+|---------|---------|
+| **False Done** | Agent says "done" but the diff is empty |
+| **Echo Chamber** | Agent writes the acceptance criteria AND passes them |
+| **Missing Evidence** | Agent claims tests passed but never ran them |
+| **Self-Reported Truth** | Agent's own status messages treated as completion |
+| **Scattered Verification** | Evidence spread across messages, files, and terminal output |
+
+PRAXIS solves these by being an **independent verification authority**. It does not trust agent claims. It checks evidence.
+
+## The Three Laws
+
+```
+LAW 1 — COMPLETION AUTHORITY
+  Agent says done ≠ done.
+  Truth Kernel FinalGate PASS = done.
+  Nothing else counts.
+
+LAW 2 — WRITE AUTHORITY
+  No worker writes to shared integration files.
+  The Deterministic Assembler is the only shared writer.
+  (Future scope — single-session only in v0.1.)
+
+LAW 3 — VERIFICATION AUTHORITY
+  FinalGate criteria come from human-authored TaskSpec only.
+  An agent cannot define or verify its own completion criteria.
 ```
 
-Without verification, there's no way to know. PRAXIS introduces the **Three Laws**:
+## The Three Gates
 
-| Law | Description |
-|-----|-------------|
-| **Completion Authority** | Agent says done ≠ done. Truth Engine FinalGate PASS = done. Nothing else counts. |
-| **Write Authority** | No worker writes to shared integration files. The Deterministic Assembler is the only shared writer. |
-| **Verification Authority** | FinalGate acceptance criteria comes from human-authored TaskSpec. An agent cannot verify its own completion. |
+| Gate | Question | Detects |
+|------|----------|---------|
+| **EvidenceGate** | Does evidence exist? | Empty diff, missing command logs, missing test output |
+| **ExecGate** | Did commands/tests actually run? | Zero tests ran, commands not executed, test failures |
+| **FinalGate** | Do results meet human criteria? | Criteria not met, task not human-approved, agent claims vs evidence |
 
-## Key Features
+## Current Status
 
-### 🛡️ Truth Engine
-The core verification layer. Every agent claim is checked against file system changes, test results, and API responses. Three verification gates — **Evidence Gate**, **Test Gate**, and **Final Gate** — ensure nothing passes without proof.
+- **Identity:** Local Truth Kernel for agentic coding tools
+- **Design progress:** ~45% (D0-D1 complete)
+- **Implementation progress:** 0% (not authorized yet)
+- **Primary interface:** Claude Code plugin + praxis CLI
+- **License:** MIT
 
-### ⚙️ Deterministic Assembler
-A single-writer pattern that prevents integration conflicts. Multiple agents can work in parallel, but only the assembler writes to shared files. No race conditions, no merge hell.
+## What PRAXIS Is Not
 
-### ⚡ Parallel Execution
-Spawn isolated subagents that work independently. Each gets its own conversation context, terminal session, and toolset — zero context pollution between workers.
+- ❌ A coding agent (does not write code, does not run its own agent loop)
+- ❌ A Claude Code clone or competitor
+- ❌ An OpenCode/MiMo clone
+- ❌ "Only a Claude Code plugin" — the kernel is independent; the plugin is a bridge
+- ❌ A desktop-first multi-agent orchestrator (not in v0.1)
+- ❌ A server/runtime platform (not in v0.1)
 
-### 🧩 Plugin Architecture
-Everything in PRAXIS is a plugin. Custom verifiers, assemblers, tool providers, and execution backends can be added without modifying core logic. The system was redesigned around a plugin-first architecture (see ADR-013).
+## Roadmap
 
-## How It Works
+| Stage | Name | Status |
+|-------|------|--------|
+| D0 | Pivot Decision Lock | ✅ Complete |
+| D1 | Plugin-First Design Pack | ✅ Complete |
+| D2 | Truth Kernel Proof Design | 🔜 Next |
+| D3 | Claude Code Plugin Spike Spec | Future |
+| D4 | Final Design Lock Audit | Future |
+| I0–I4 | Implementation | ⛔ Not authorized |
 
-1. **Define a TaskSpec** — Human-authored acceptance criteria that define what "done" means
-2. **Execute** — One or more agents work on the task in isolated environments
-3. **Verify** — The Truth Engine runs each agent's output through three verification gates
-4. **Assemble** — The Deterministic Assembler merges verified outputs into the final result
-5. **Deliver** — Only fully verified, assembled results are presented as complete
+## Project Layout
 
-## Getting Started
-
-Ready to try PRAXIS? Head over to the [Quickstart Guide](/docs/quickstart) to get up and running in minutes.
-
-## Project Status
-
-PRAXIS is under active development. The architecture and core designs are complete. Implementation is ongoing across multiple tracks (D3/P1–P6).
-
-- **Architecture**: ✅ Complete
-- **Plugin System**: ✅ Designed
-- **Truth Engine**: 🚧 In Development
-- **CLI**: 🚧 In Development
-- **Dashboard**: 📋 Planned
+```
+praxis/
+├── README.md
+├── docs/
+│   ├── decisions.md
+│   ├── adr/
+│   ├── product-scope.md
+│   ├── phase-map.md
+│   └── ...
+├── artifacts/
+└── pi/                          # Old Pi monorepo (reference only)
+```

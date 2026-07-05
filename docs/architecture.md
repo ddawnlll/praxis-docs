@@ -1,125 +1,118 @@
 ---
 id: architecture
 title: Architecture
-description: How PRAXIS works under the hood — the Three Laws, verification gates, and plugin system.
+description: How PRAXIS works — the Three Laws, Three Gates, Truth Kernel, and CLI plugin architecture.
 ---
 
-# Architecture 🏗️
+# Architecture
 
-PRAXIS is built around three core principles — the **Three Laws** — that guarantee agents actually complete their tasks.
+PRAXIS is not a runtime or a coding agent. It is a **local Truth Kernel** — a deterministic verification engine that sits above coding agents and checks whether they actually completed the task.
+
+## Overview
+
+```text
+┌───────────────┐     ┌──────────────────┐     ┌──────────────┐
+│  .praxis/     │     │   Truth Kernel   │     │   Agent      │
+│  task.yaml    │────▶│                  │◀────│  (Claude,    │
+│  (human-      │     │  EvidenceGate    │     │   OpenCode,  │
+│   approved)   │     │  ExecGate        │     │   etc.)      │
+│               │     │  FinalGate       │     │              │
+│               │     │                  │────▶│              │
+│               │     │  RepairPacket    │     │              │
+└───────────────┘     └──────────────────┘     └──────────────┘
+                              │
+                              ▼
+                     ┌──────────────────┐
+                     │  .praxis/runs/   │
+                     │  evidence.jsonl  │
+                     │  .praxis/reports/│
+                     └──────────────────┘
+```
 
 ## The Three Laws
 
 ### Law 1 — Completion Authority
 
-> Agent says done ≠ done. Truth Engine FinalGate PASS = done. Nothing else counts.
+**Agent says done ≠ done. Truth Kernel FinalGate PASS = done. Nothing else counts.**
 
-No agent can declare a task complete. Only the Truth Engine, after passing through all three verification gates, can mark a task as done.
+No agent can declare a task complete. Only the kernel, after passing through all three gates, can mark a task as done. The agent's own status messages are not evidence.
 
 ### Law 2 — Write Authority
 
-> No worker writes to shared integration files. The Deterministic Assembler is the only shared writer.
+**No worker writes to shared integration files. The Deterministic Assembler is the only shared writer.**
 
-Multiple agents can execute in parallel, but they write to isolated sandboxes. The Deterministic Assembler merges their verified outputs into shared files, preventing race conditions and conflicts.
+In future versions, multiple agents will work in parallel but write to isolated sandboxes. Only the assembler merges verified outputs. In v0.1, this applies to single-session use.
 
 ### Law 3 — Verification Authority
 
-> FinalGate acceptance criteria comes from human-authored TaskSpec. An agent cannot verify its own completion.
+**FinalGate criteria come from human-authored TaskSpec only. An agent cannot define or verify its own completion criteria.**
 
-The criteria for "done" are defined by humans in a TaskSpec document. Agents execute the work, but they never define or verify their own success criteria.
+The TaskSpec is written (or at minimum approved) by a human. Agent-drafted criteria are drafts only — they become binding only after human approval.
 
-## System Architecture
+## The Three Gates
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│                      PRAXIS CLI                          │
-├─────────────────────────────────────────────────────────┤
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐ │
-│  │  Plugin  │  │   CLI    │  │ Dashboard│  │   SDK    │ │
-│  │  Manager │  │  Parser  │  │  Server  │  │  Client  │ │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘ │
-├──────────────┴──────────────┴──────────────┴───────────┤
-│                    Core Runtime                          │
-├─────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────────┐   │
-│  │                 Truth Engine                     │   │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐      │   │
-│  │  │ Evidence │  │   Test   │  │  Final   │      │   │
-│  │  │   Gate   │  │   Gate   │  │   Gate   │      │   │
-│  │  └──────────┘  └──────────┘  └──────────┘      │   │
-│  └─────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │            Deterministic Assembler                │   │
-│  └─────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │               Execution Engine                   │   │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐      │   │
-│  │  │ Parallel  │  │ Sandbox  │  │ Resource │      │   │
-│  │  │  Runner   │  │ Manager  │  │ Monitor  │      │   │
-│  │  └──────────┘  └──────────┘  └──────────┘      │   │
-│  └─────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-```
+### EvidenceGate
 
-## Verification Gates
+Checks that verifiable evidence exists for the agent's claims:
 
-### 1. Evidence Gate
-Checks that the agent's claims are supported by verifiable evidence:
-- File existence and content
-- Test output and exit codes
-- API response codes
-- Git diff and commit status
+- **Git diff** — Were files actually changed?
+- **Command logs** — Were commands actually executed?
+- **Test output** — Were tests actually run?
+- **File existence** — Do the claimed output files exist?
 
-### 2. Test Gate
-Runs the project's test suite against the agent's changes:
-- Unit tests
-- Integration tests
-- Lint checks
-- Type checking
+EvidenceGate answers: *"Can we see proof the agent did something?"*
 
-### 3. Final Gate
-The ultimate authority — compares results against the human-authored TaskSpec:
-- All acceptance criteria met
-- No regressions introduced
-- Documentation updated
-- All gates pass
+### ExecGate
 
-## Plugin System
+Checks that commands and tests actually ran and passed:
 
-PRAXIS uses a plugin-first architecture (ADR-013). Every component is a plugin:
+- **Exit codes** — Did commands exit 0?
+- **Test results** — Did tests actually run and pass? (checks for false-done where agent says "all tests pass" but never ran them)
+- **Command presence** — Were the claimed commands actually in the terminal history?
 
-| Plugin Type | Purpose | Examples |
-|-------------|---------|----------|
-| **Verifier** | Custom verification logic | File checker, API validator, regex matcher |
-| **Assembler** | Merge strategies | Text merge, JSON merge, Git merge |
-| **Executor** | Execution backends | Local, Docker, SSH, Cloud |
-| **Tool** | Agent tools | Git, npm, Docker, curl |
-| **Provider** | External integrations | GitHub, CI/CD, Slack |
+ExecGate answers: *"Did the work actually execute correctly?"*
 
-## Data Flow
+### FinalGate
 
-```text
-┌─────────┐     ┌────────────┐     ┌───────────┐     ┌──────────┐
-│ TaskSpec │────▶│  Execution │────▶│   Truth   │────▶│ Assembler │
-│ (Human)  │     │  Engine    │     │  Engine   │     │           │
-└─────────┘     └────────────┘     └───────────┘     └──────────┘
-                      │                                    │
-                      ▼                                    ▼
-               ┌────────────┐                      ┌──────────┐
-               │  Agent(s)  │                      │  Output  │
-               │ (Parallel) │                      │ (Merged) │
-               └────────────┘                      └──────────┘
-```
+Checks results against the human-approved acceptance criteria:
 
-1. A human writes a **TaskSpec** defining acceptance criteria
-2. The **Execution Engine** spawns agent(s) in isolated sandboxes
-3. Each agent works independently and produces output
-4. The **Truth Engine** runs outputs through all three verification gates
-5. The **Deterministic Assembler** merges verified outputs
-6. Only fully verified results are delivered as complete
+- **Criterion matching** — Does each AC pass?
+- **Human approval** — Was the TaskSpec human-approved?
+- **Evidence integrity** — Do agent claims match the evidence?
 
-## Next Steps
+FinalGate answers: *"Does the result meet what the human asked for?"*
 
-- **[Quickstart Guide](/docs/quickstart)** — Get PRAXIS running in 5 minutes
-- **[CLI Reference](/docs/guides/cli-reference)** — All commands and flags
-- **[Configuration Guide](/docs/guides/configuration)** — Customize your setup
+## Verdict Ladder
+
+| EvidenceGate | ExecGate | FinalGate | Overall |
+|-------------|----------|-----------|---------|
+| PASS | PASS | PASS | **PASS** — task complete |
+| HOLD | PASS | PASS | HOLD — evidence gaps |
+| * | HOLD | * | HOLD — execution gaps |
+| * | * | HOLD | HOLD — criteria gaps |
+| FAIL | * | * | **FAIL** |
+| * | FAIL | * | **FAIL** |
+| * | * | FAIL | **FAIL** |
+
+## Key Principles
+
+- **Agent claims are not completion.** Kernel-verified evidence is completion.
+- **Human-approved acceptance criteria are mandatory.** Agent-generated criteria are drafts only.
+- **The plugin is a bridge, not the kernel.** Claude Code plugin displays verdicts; kernel produces them.
+- **The kernel is agent-agnostic.** It verifies evidence from any coding agent (Claude Code, OpenCode, Gemini CLI, etc.).
+- **Manual before automatic.** v0.1 is explicit operator-driven verify/repair.
+
+## Current Scope (v0.1)
+
+| Component | Status |
+|-----------|--------|
+| praxis CLI (6 commands) | Design complete |
+| Truth Kernel (3 gates) | Design complete |
+| Claude Code plugin | Design complete |
+| RepairPacket generator | Design complete |
+| Evidence store (JSONL) | Design complete |
+| Desktop Mission Control | Future (v0.3+) |
+| Server/runtime (Hono, HTTP) | Future (v0.2+) |
+| PostgreSQL event log | Future (v0.2+) |
+| Multi-worker orchestration | Future (v0.3+) |
+| Auto-hook verification | Future (v0.2+) |

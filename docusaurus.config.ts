@@ -4,14 +4,14 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'PRAXIS',
-  tagline: 'The parallel runtime for autonomous AI coding execution — verify, delegate, scale.',
+  tagline: 'Truth Kernel for agentic coding tools',
   favicon: 'img/favicon.ico',
 
-  url: 'https://praxis-docs.netlify.app',
+  url: 'https://praxis-docs-site.netlify.app',
   baseUrl: '/',
 
-  organizationName: 'praxis',
-  projectName: 'praxis-docs',
+  organizationName: 'ddawnlll',
+  projectName: 'praxis',
 
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
@@ -27,7 +27,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: undefined,
+          editUrl: 'https://github.com/ddawnlll/praxis-docs/edit/main/',
           showLastUpdateTime: true,
         },
         blog: {
@@ -48,28 +48,34 @@ const config: Config = {
   ],
 
   themeConfig: {
-    image: 'img/mascot.png',
+    image: 'img/mascot-v1.png',
     colorMode: {
       defaultMode: 'dark',
       respectPrefersColorScheme: false,
+      disableSwitch: true,
     },
     navbar: {
-      title: 'PRAXIS',
+      title: '',
       logo: {
-        alt: 'PRAXIS Logo',
-        src: 'img/mascot-icon.png',
+        alt: 'PRAXIS',
+        src: 'img/praxis-wordmark.svg',
       },
       items: [
         {
           type: 'docSidebar',
           sidebarId: 'docsSidebar',
           position: 'left',
-          label: 'Docs',
+          label: 'DOCS',
         },
-        {to: '/blog', label: 'Blog', position: 'left'},
+        {to: '/blog', label: 'BLOG', position: 'left'},
         {
-          href: 'https://github.com/praxis',
-          label: 'GitHub',
+          href: 'https://github.com/ddawnlll/praxis',
+          label: 'GITHUB',
+          position: 'right',
+        },
+        {
+          to: '/docs/quickstart',
+          label: 'INSTALL',
           position: 'right',
         },
       ],
@@ -78,54 +84,30 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'DOCS',
           items: [
-            {
-              label: 'Quickstart',
-              to: '/docs/quickstart',
-            },
-            {
-              label: 'Introduction',
-              to: '/docs/introduction',
-            },
-            {
-              label: 'Architecture',
-              to: '/docs/architecture',
-            },
+            {label: 'Quickstart', to: '/docs/quickstart'},
+            {label: 'Introduction', to: '/docs/introduction'},
+            {label: 'Architecture', to: '/docs/architecture'},
           ],
         },
         {
-          title: 'Guides',
+          title: 'GUIDES',
           items: [
-            {
-              label: 'Getting Started',
-              to: '/docs/guides/getting-started',
-            },
-            {
-              label: 'CLI Reference',
-              to: '/docs/guides/cli-reference',
-            },
-            {
-              label: 'Configuration',
-              to: '/docs/guides/configuration',
-            },
+            {label: 'Getting Started', to: '/docs/guides/getting-started'},
+            {label: 'CLI Reference', to: '/docs/guides/cli-reference'},
+            {label: 'Configuration', to: '/docs/guides/configuration'},
           ],
         },
         {
-          title: 'More',
+          title: 'MORE',
           items: [
-            {
-              label: 'Blog',
-              to: '/blog',
-            },
-            {
-              label: 'GitHub',
-              href: 'https://github.com/praxis',
-            },
+            {label: 'Blog', to: '/blog'},
+            {label: 'GitHub', href: 'https://github.com/ddawnlll/praxis'},
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} PRAXIS. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} PRAXIS. MIT LICENSE.`,
     },
     prism: {
       theme: prismThemes.dracula,

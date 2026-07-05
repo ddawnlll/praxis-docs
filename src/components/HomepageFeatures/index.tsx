@@ -3,81 +3,57 @@ import Heading from '@theme/Heading';
 import styles from './styles.module.css';
 
 type FeatureItem = {
+  number: string;
   title: string;
-  icon: string;
-  description: ReactNode;
+  description: string;
 };
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Truth Engine',
-    icon: '✅',
-    description: (
-      <>
-        The core verification layer. Every agent claim is checked against hard evidence — 
-        file system changes, test results, API responses. No more "agent says done" without proof.
-      </>
-    ),
+    number: '#1 CONNECT',
+    title: 'Lives Everywhere',
+    description: 'CLI, Telegram, Discord, Slack, email — and a growing list of platforms. One agent, one memory, every surface.',
   },
   {
-    title: 'Deterministic Assembly',
-    icon: '⚙️',
-    description: (
-      <>
-        A single writer rule prevents integration conflicts. The Deterministic Assembler 
-        merges worker outputs into shared files, eliminating race conditions and merge hell.
-      </>
-    ),
+    number: '#2 REMEMBER',
+    title: 'Persistent Memory',
+    description: 'Learns your projects, auto-generates skills, and never forgets how it solved a problem across sessions.',
   },
   {
-    title: 'Parallel Execution',
-    icon: '⚡',
-    description: (
-      <>
-        Spawn isolated subagents that work in parallel with zero context pollution. 
-        Each gets its own conversation, terminal, and toolset — results merge back cleanly.
-      </>
-    ),
+    number: '#3 SCHEDULE',
+    title: 'Focused Automation',
+    description: 'Natural-language scheduling for reports, backups, and briefings — running unattended through the gateway.',
   },
   {
-    title: 'Plugin Architecture',
-    icon: '🧩',
-    description: (
-      <>
-        Everything is a plugin. Extend PRAXIS with custom verifiers, assemblers, 
-        tool providers, and execution backends without touching core logic.
-      </>
-    ),
+    number: '#4 DELEGATE',
+    title: 'Tasks Multiplied',
+    description: 'Isolated subagents with their own conversations, terminals, and toolkits for parallel workstreams.',
   },
   {
-    title: 'Verification Gates',
-    icon: '🛡️',
-    description: (
-      <>
-        Three verification gates — Evidence, Test, and Final — ensure no task completes 
-        without meeting its acceptance criteria. Human-authored TaskSpec defines what "done" means.
-      </>
-    ),
+    number: '#5 SEARCH',
+    title: 'Browse the Web',
+    description: 'Web search, browser automation, vision, image generation, TTS, and multi-model reasoning.',
   },
   {
-    title: 'Everywhere Deployment',
-    icon: '🌐',
-    description: (
-      <>
-        Run on local machines, Docker containers, SSH hosts, or cloud infrastructure. 
-        PRAXIS adapts to your environment, not the other way around.
-      </>
-    ),
+    number: '#6 EXPERIMENT',
+    title: 'Isolated Sandboxing',
+    description: 'Five backends — local, Docker, SSH, cloud — with container hardening and namespace isolation.',
   },
 ];
 
-function Feature({title, icon, description}: FeatureItem) {
+function Feature({number, title, description}: FeatureItem) {
   return (
     <div className="col col--4 margin-bottom--lg">
       <div className="feature-card">
-        <div className="feature-card__icon">{icon}</div>
+        <div className="feature-card__number">{number}</div>
         <div className="feature-card__title">{title}</div>
         <div className="feature-card__description">{description}</div>
+        <div style={{
+          width: '100%',
+          height: '120px',
+          background: 'var(--ink-blue)',
+          marginTop: '1.5rem',
+        }} />
       </div>
     </div>
   );
@@ -87,13 +63,29 @@ export default function HomepageFeatures(): ReactNode {
   return (
     <section className={styles.features}>
       <div className="container">
-        <div className="section-header">
-          <h2 className="section-header__title">
-            Why PRAXIS?
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem'}}>
+          <h2 style={{
+            fontFamily: "'Instrument Serif', serif",
+            fontSize: '2rem',
+            color: 'var(--ink-text)',
+            margin: 0,
+          }}>
+            Everything You Need
           </h2>
-          <p className="section-header__subtitle">
-            The only verification layer that actually proves your agent completed the task.
-          </p>
+          <div style={{display: 'flex', gap: '0.5rem'}}>
+            <span className="label-small" style={{
+              padding: '0.3rem 0.75rem',
+              border: '1.5px solid var(--ink-blue)',
+              color: 'var(--ink-blue)',
+              cursor: 'pointer',
+            }}>FEATURE</span>
+            <span className="label-small" style={{
+              padding: '0.3rem 0.75rem',
+              border: '1.5px solid var(--cream-darker)',
+              color: 'var(--ink-text-muted)',
+              cursor: 'pointer',
+            }}>PREVIEW</span>
+          </div>
         </div>
         <div className="row">
           {FeatureList.map((props, idx) => (

@@ -1,109 +1,133 @@
 ---
 id: quickstart
 title: Quickstart
-description: Get PRAXIS up and running in 5 minutes.
+description: Get PRAXIS up and running — install the CLI, define a task, and verify agent output.
 ---
 
-# Quickstart 🚀
+# Quickstart
 
-This guide gets you from zero to a working PRAXIS setup. You'll install the CLI, configure your first project, and run a verification.
+This guide takes you from zero to a working PRAXIS verification in minutes.
 
 ## Prerequisites
 
-- **Node.js** 18+ (recommended: 22.x)
-- **npm** 9+ or **yarn** 1.22+
+- **Node.js** 18+ or **Bun** 1.0+
+- **Claude Code** (or any coding agent you want to verify)
 - A terminal with Git access
 
-## 1. Install PRAXIS CLI
+## 1. Install PRAXIS
 
 ```bash
 npm install -g @praxis/cli
 ```
 
-Or install locally in your project:
-
-```bash
-npm install --save-dev @praxis/cli
-```
-
-Verify the installation:
+Verify:
 
 ```bash
 praxis --version
-# v2.0.0
+# v0.1.0
 ```
 
-## 2. Initialize a Project
-
-Create a new PRAXIS project or add PRAXIS to an existing one:
+## 2. Initialize a Workspace
 
 ```bash
-# Create a new project
-praxis init my-project
-cd my-project
-
-# Or add to existing project
-praxis init --existing
+cd your-project
+praxis init
 ```
 
-This creates a `.praxis/` directory with the default configuration:
+This creates:
 
 ```text
-my-project/
-├── .praxis/
-│   ├── config.yaml       # PRAXIS configuration
-│   └── tasks/            # Task definitions
-├── package.json
-└── README.md
+.praxis/
+├── task.yaml          # Task specification with acceptance criteria
+├── runs/              # Evidence from verification runs
+└── reports/           # Audit reports
 ```
 
-## 3. Write Your First TaskSpec
+## 3. Define a Task
 
-TaskSpec defines what "done" means. Create `.praxis/tasks/hello.yaml`:
+```bash
+praxis spec --description "Add a health check endpoint to the API"
+```
+
+This drafts a TaskSpec in `.praxis/task.yaml`. **A human must review and approve it** — set `human_approved: true` in the file.
 
 ```yaml
-id: hello-world
-name: Hello World
-description: A simple task that creates a hello.txt file
-gates:
-  evidence:
-    - type: file_exists
-      path: hello.txt
-  test:
-    - type: content_match
-      path: hello.txt
-      pattern: "Hello, PRAXIS!"
+# .praxis/task.yaml
+id: PRAXIS-2026-001
+description: Add a health check endpoint to the API
+human_approved: false  # ← must be set to true by a human
+acceptance_criteria:
+  - id: AC-001
+    description: A GET /health endpoint returns 200
+  - id: AC-002
+    description: Response body includes {"status": "ok"}
 ```
 
-## 4. Run the Task
+## 4. Let Your Agent Do the Work
+
+Now run your coding agent (Claude Code, OpenCode, etc.) independently. PRAXIS is not involved in the coding step.
 
 ```bash
-praxis run hello-world
+claude "Add a health check endpoint to the API"
 ```
 
-You'll see output like this:
+## 5. Verify
+
+```bash
+praxis verify
+```
+
+PRAXIS collects evidence — git diff, command output, test results — and runs it through the three gates:
 
 ```text
-┌─ PRAXIS v2.0 — Running hello-world
-├─ Executing agent task...
-├─ ✓ Evidence Gate: hello.txt exists
-├─ ✓ Test Gate: content matches pattern
-├─ ✓ Final Gate: ALL PASSED
-└─ 🎉 Task hello-world COMPLETE
+Collecting evidence...
+  ✓ git diff: 2 files changed
+  ✓ bun test: 12 passed, 0 failed
+  ✓ command logs: bun test, bun run typecheck
+
+EvidenceGate: PASS  (evidence exists)
+ExecGate:     PASS  (tests actually ran)
+FinalGate:    PASS  (2/2 criteria met)
+
+Verdict: PASS ✓
 ```
 
-## 5. Verify the Result
+## 6. Generate a Report
 
 ```bash
-cat hello.txt
-# Hello, PRAXIS!
+praxis report
 ```
 
-The task passed all three verification gates — **evidence**, **test**, and **final**. You know it's really done.
+A signed audit report is saved to `.praxis/reports/<run-id>.md`.
+
+---
+
+### Failure Path
+
+If verification fails, PRAXIS tells you exactly what went wrong:
+
+```text
+praxis verify
+EvidenceGate: PASS
+ExecGate:     FAIL  (bun test: 0 tests ran)
+FinalGate:    FAIL  (0/3 criteria met)
+
+Verdict: FAIL ✗
+```
+
+Use `praxis repair` to generate a repair packet with specific instructions for the agent:
+
+```bash
+praxis repair
+# → RepairPacket generated targeting each failed criterion
+```
+
+Then let the agent fix only the failures and re-verify.
+
+---
 
 ## Next Steps
 
-- **[Architecture Overview](/docs/architecture)** — Understand how PRAXIS works under the hood
-- **[CLI Reference](/docs/guides/cli-reference)** — All available commands and flags
-- **[Configuration Guide](/docs/guides/configuration)** — Customize PRAXIS for your project
-- **[Getting Started Guide](/docs/guides/getting-started)** — A deeper walkthrough with examples
+- **[Architecture](/docs/architecture)** — How the three gates work
+- **[CLI Reference](/docs/guides/cli-reference)** — All commands and flags
+- **[Getting Started Guide](/docs/guides/getting-started)** — Deeper walkthrough with examples

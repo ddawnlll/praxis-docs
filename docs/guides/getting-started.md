@@ -1,179 +1,150 @@
 ---
 id: getting-started
 title: Getting Started Guide
-description: A deeper walkthrough of PRAXIS with practical examples.
+description: A practical walkthrough of using PRAXIS to verify coding agent output.
 ---
 
-# Getting Started Guide 🎯
+# Getting Started Guide
 
-This guide walks you through setting up PRAXIS for a real project, writing TaskSpecs, running parallel agents, and interpreting verification results.
+This guide walks you through a real PRAXIS workflow — from setting up a project to verifying agent output and handling failures.
 
 ## Prerequisites
 
-Make sure you've completed the [Quickstart](/docs/quickstart) first — you should have PRAXIS installed and know how to run a basic task.
+Make sure you've completed the [Quickstart](/docs/quickstart) first — you should have PRAXIS installed and know the basic verify loop.
 
-## Project Setup
-
-### Initialize a New Project
+## Setup
 
 ```bash
-praxis init my-awesome-project
-cd my-awesome-project
+cd your-project
+praxis init
 ```
 
-This creates the standard project structure:
+This creates `.praxis/task.yaml`. If the file already exists from a previous session, `init` will not overwrite it.
+
+## Writing a TaskSpec
+
+The TaskSpec is the contract. It defines what "done" means. **A human must approve it.**
+
+```bash
+praxis spec --description "Add input validation to the signup form"
+```
+
+This drafts:
+
+```yaml
+# .praxis/task.yaml
+id: PRAXIS-2026-002
+description: Add input validation to the signup form
+human_approved: false
+acceptance_criteria:
+  - id: AC-001
+    description: Email field validates format
+  - id: AC-002
+    description: Password field enforces minimum length
+  - id: AC-003
+    description: Validation errors display inline
+```
+
+Edit the file to refine the criteria, then set `human_approved: true`.
+
+## The Verify Loop
+
+### 1. Agent Works
+
+Let your coding agent work independently:
+
+```bash
+claude "Add input validation to the signup form"
+```
+
+PRAXIS is not involved here. The agent produces code, runs tests, makes commits — all in its normal flow.
+
+### 2. Collect Evidence
+
+```bash
+praxis verify
+```
+
+The kernel collects:
+- `git diff` — what files changed
+- Terminal history — what commands ran (bun test, npm run typecheck, etc.)
+- Test output — did tests pass?
+- Any files the agent claims to have created
+
+### 3. Gates Run
+
+Each gate checks a specific claim:
 
 ```text
-my-awesome-project/
-├── .praxis/
-│   ├── config.yaml
-│   ├── tasks/
-│   │   └── example.yaml
-│   └── plugins/
-└── README.md
+EvidenceGate: checking evidence exists...
+  ✓ 3 files changed (git diff)
+  ✓ bun test ran (command log)
+  ✓ Test output captured
+
+ExecGate: checking execution...
+  ✓ bun test exited 0 (12 passed)
+  ✓ bun run typecheck exited 0
+
+FinalGate: checking criteria...
+  ✓ AC-001: Email validation added
+  ✓ AC-002: Password min length enforced
+  ✓ AC-003: Inline error display added
+  
+Verdict: PASS ✓
 ```
 
-### Add to an Existing Project
+### 4. Generate Report
 
 ```bash
-cd existing-project
-praxis init --existing
+praxis report
 ```
 
-PRAXIS will detect your project type from `package.json`, `pyproject.toml`, `Cargo.toml`, etc., and configure sensible defaults.
+A signed audit report is written to `.praxis/reports/<run-id>.md`.
 
-## Writing TaskSpecs
+## Handling Failures
 
-A TaskSpec is a YAML document that defines:
-- What the task does
-- What evidence counts as proof of completion
-- What tests must pass
-- What final criteria determine success
+When verification fails, don't re-run the agent blindly. Use `praxis repair`:
 
-### Basic TaskSpec
+```bash
+praxis verify
+Verdict: FAIL ✗
+
+praxis repair
+```
+
+This generates a **RepairPacket** — a structured list of what failed and what the agent needs to fix:
 
 ```yaml
-id: add-unit-tests
-name: Add Unit Tests for Auth Module
-description: Write unit tests for the authentication module with at least 80% coverage
-gates:
-  evidence:
-    - type: file_exists
-      path: tests/test_auth.py
-    - type: min_coverage
-      threshold: 80
-      scope: src/auth/
-  test:
-    - type: command
-      cmd: npm test
-      expected_exit: 0
-    - type: command
-      cmd: npm run coverage
-      expected_pattern: "Lines: 8[0-9]%"
-  final:
-    - type: diff_size
-      max_additions: 500
-    - type: no_todos
+# RepairPacket targeting each failed criterion
+targets:
+  - criterion: AC-002
+    issue: Password min length not enforced
+    hint: Add minLength: 8 to the password input
+  - criterion: AC-003
+    issue: Validation errors not visible in UI
+    hint: Add an error message component below each field
 ```
 
-### TaskSpec Reference
-
-| Section | Purpose | Example Check |
-|---------|---------|---------------|
-| `evidence` | Verifiable facts | File exists, coverage ≥ 80% |
-| `test` | Automated checks | Tests pass, lint clean |
-| `final` | Quality gates | Diff size limit, no TODOs |
-
-## Running Tasks
-
-### Single Task
+Give the repair packet to your agent:
 
 ```bash
-praxis run add-unit-tests
+claude "Fix these issues: [paste RepairPacket]"
 ```
 
-### Multiple Tasks in Parallel
+Then re-verify:
 
 ```bash
-praxis run --parallel task-a task-b task-c
+praxis verify
 ```
 
-### Watch Mode
+## Tips
 
-```bash
-praxis run --watch add-unit-tests
-```
-
-Reruns automatically when TaskSpec or source files change.
-
-## Verification Output
-
-Every run produces a detailed verification report:
-
-```text
-Task: add-unit-tests
-────────────────────────────────────────
-┌─ Evidence Gate ──────────────────────
-├─ ✓ tests/test_auth.py exists
-├─ ✓ Coverage in src/auth/: 87.3% ≥ 80%
-├─ Status: PASS
-│
-├─ Test Gate ──────────────────────────
-├─ ✓ npm test → exit 0 (12 passed)
-├─ ✓ npm run coverage → "Lines: 87.3%"
-├─ Status: PASS
-│
-├─ Final Gate ─────────────────────────
-├─ ✓ Diff size: 342 additions ≤ 500
-├─ ✓ No TODO/FIXME/HACK comments
-├─ Status: PASS
-│
-└─ 🎉 ALL GATES PASSED
-```
-
-## Parallel Agent Execution
-
-PRAXIS can spawn multiple agents to work on independent tasks simultaneously:
-
-```bash
-praxis run --parallel \
-  implement-auth \
-  add-unit-tests \
-  write-docs
-```
-
-Each agent gets:
-- **Isolated terminal** — No cross-agent interference
-- **Independent context** — Separate conversation history
-- **Dedicated sandbox** — Writes to isolated directories
-- **Individual TO** — Separate timeout and resource limits
-
-The **Deterministic Assembler** merges their verified outputs at the end.
-
-## Plugin Configuration
-
-PRAXIS plugins go in `.praxis/plugins/`:
-
-```yaml
-# .praxis/plugins/custom-verifier.yaml
-name: my-custom-verifier
-type: verifier
-module: ./verifiers/my-verifier.ts
-config:
-  api_endpoint: https://api.example.com/verify
-  timeout: 5000
-```
-
-Enable plugins in `.praxis/config.yaml`:
-
-```yaml
-plugins:
-  - custom-verifier
-  - docker-executor
-  - slack-notifier
-```
+- **Keep TaskSpecs small and focused.** A single task should verify one thing.
+- **Set `human_approved: true` explicitly.** The kernel checks this field.
+- **Use `praxis status`** to see the current state of your workspace.
+- **Evidence is stored in JSONL** at `.praxis/runs/<id>/evidence.jsonl` — inspect it directly if a gate's behavior is unclear.
 
 ## Next Steps
 
-- **[CLI Reference](/docs/guides/cli-reference)** — Full command documentation
-- **[Configuration Guide](/docs/guides/configuration)** — Customize every aspect of PRAXIS
+- **[CLI Reference](/docs/guides/cli-reference)** — All commands and flags
+- **[Configuration Guide](/docs/guides/configuration)** — Customize your setup

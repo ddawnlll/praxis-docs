@@ -1,178 +1,92 @@
 ---
 id: configuration
 title: Configuration
-description: Complete configuration reference for PRAXIS.
+description: Reference for the PRAXIS TaskSpec YAML format and environment configuration.
 ---
 
-# Configuration ⚙️
+# Configuration
 
-PRAXIS is configured through a YAML file located at `.praxis/config.yaml` in your project root. This reference covers every configuration option.
+PRAXIS is configured through the `.praxis/task.yaml` file in your project root, plus environment variables.
 
-## File Structure
+## TaskSpec Format
+
+The TaskSpec is a YAML file that defines the task to be verified.
 
 ```yaml
-# .praxis/config.yaml — PRAXIS Configuration
-
-project:
-  name: my-project
-  version: 2.0.0
-
-execution:
-  engine: auto
-  max_workers: 3
-  timeout: 300
-  sandbox: true
-
-gates:
-  evidence:
-    enabled: true
-    checks:
-      - file_exists
-      - content_match
-      - cmd_exit_code
-  test:
-    enabled: true
-    pre_hook: npm run build
-    command: npm test
-    coverage:
-      enabled: true
-      threshold: 80
-  final:
-    enabled: true
-    rules:
-      - no_todos
-      - diff_size: 500
-      - docs_updated
-
-plugins:
-  directory: .praxis/plugins
-  enabled: []
-
-assembler:
-  strategy: deterministic
-  output_dir: .praxis/output
-
-logging:
-  level: info
-  format: pretty
-  file: .praxis/logs/praxis.log
+# .praxis/task.yaml
+id: PRAXIS-2026-001
+description: Add a health check endpoint to the API
+human_approved: false
+acceptance_criteria:
+  - id: AC-001
+    description: A GET /health endpoint returns 200
+  - id: AC-002
+    description: Response body includes {"status": "ok"}
 ```
 
-## Top-Level Sections
+### Fields
 
-### `project`
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | auto | Auto-generated task ID |
+| `description` | string | yes | What the task does |
+| `human_approved` | bool | yes | Must be set to `true` by a human before verification |
+| `acceptance_criteria` | array | yes | List of criteria that define completion |
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `name` | string | (directory name) | Project display name |
-| `version` | string | `2.0.0` | Project version |
+### Acceptance Criteria
 
----
+Each criterion has:
 
-### `execution`
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier (e.g., AC-001) |
+| `description` | string | What passes this criterion. Be specific. |
 
-Controls how agents are executed.
+### Example: Multi-criteria Task
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `engine` | string | `auto` | Execution engine: `auto`, `local`, `docker`, `ssh`, `cloud` |
-| `max_workers` | int | `3` | Maximum parallel agents |
-| `timeout` | int | `300` | Agent timeout in seconds |
-| `sandbox` | bool | `true` | Enable sandbox isolation |
+```yaml
+id: PRAXIS-2026-003
+description: Refactor the auth module to use async/await
+human_approved: true
+acceptance_criteria:
+  - id: AC-001
+    description: All auth routes use async handlers
+  - id: AC-002
+    description: No .then() or callback patterns remain in auth/
+  - id: AC-003
+    description: All existing tests pass after refactor
+  - id: AC-004
+    description: TypeScript strict mode compiles without errors
+```
 
-**Engine backends:**
+## Evidence Store
 
-| Backend | Description |
-|---------|-------------|
-| `local` | Execute on the local machine |
-| `docker` | Execute in Docker containers |
-| `ssh` | Execute on remote machines via SSH |
-| `cloud` | Execute on cloud infrastructure |
-| `auto` | Automatically select based on environment |
+Evidence from verification runs is stored in `.praxis/runs/<run-id>/evidence.jsonl`. Each line is a JSON object with:
 
----
+| Field | Description |
+|-------|-------------|
+| `gate` | Which gate produced this evidence (evidence, exec, final) |
+| `type` | Evidence type (git_diff, command_log, test_output, file_check) |
+| `timestamp` | When the evidence was collected |
+| `data` | The evidence payload |
+| `passed` | Whether this piece of evidence passed its check |
 
-### `gates`
+## Environment Variables
 
-Configures the three verification gates.
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PRAXIS_HOME` | PRAXIS data directory | `.praxis/` |
+| `PRAXIS_LOG_LEVEL` | Log level: debug, info, warn, error | `info` |
+| `PRAXIS_NO_COLOR` | Disable colored output | `false` |
 
-#### evidence
+## Plugin Configuration (Future)
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `enabled` | bool | `true` | Enable evidence gate |
-| `checks` | array | `all` | Specific checks to run |
+The Claude Code plugin and other agent adapters will be configured through `.praxis/plugins/`. This is design-stage and not yet implemented in v0.1.
 
-Available checks: `file_exists`, `content_match`, `cmd_exit_code`, `git_diff`, `api_response`
+## TaskSpec Best Practices
 
-#### test
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `enabled` | bool | `true` | Enable test gate |
-| `pre_hook` | string | `null` | Command to run before tests |
-| `command` | string | auto-detected | Test command |
-| `coverage.enabled` | bool | `false` | Enable coverage checks |
-| `coverage.threshold` | int | `80` | Minimum coverage percentage |
-
-#### final
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `enabled` | bool | `true` | Enable final gate |
-| `rules` | array | `[]` | Final gate rules |
-
-Available rules: `no_todos`, `diff_size: <max>`, `docs_updated`, `changelog_updated`
-
----
-
-### `plugins`
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `directory` | string | `.praxis/plugins` | Plugin directory |
-| `enabled` | array | `[]` | Enabled plugin names |
-
----
-
-### `assembler`
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `strategy` | string | `deterministic` | Merge strategy |
-| `output_dir` | string | `.praxis/output` | Output directory |
-
----
-
-### `logging`
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `level` | string | `info` | Log level: `debug`, `info`, `warn`, `error` |
-| `format` | string | `pretty` | Output format: `pretty`, `json`, `silent` |
-| `file` | string | — | Optional log file path |
-
-## Configuration Precedence
-
-Settings are resolved in this order (later overrides earlier):
-
-1. Default values (hardcoded)
-2. `.praxis/config.yaml` (project config)
-3. `~/.praxis/config.yaml` (user config)
-4. Environment variables (`PRAXIS_*`)
-5. CLI flags
-
-## Environment Variable Reference
-
-| Variable | Maps To | Example |
-|----------|---------|---------|
-| `PRAXIS_HOME` | Data directory | `~/.praxis/` |
-| `PRAXIS_LOG_LEVEL` | `logging.level` | `debug` |
-| `PRAXIS_TIMEOUT` | `execution.timeout` | `600` |
-| `PRAXIS_MAX_WORKERS` | `execution.max_workers` | `5` |
-| `PRAXIS_ENGINE` | `execution.engine` | `docker` |
-| `PRAXIS_PLUGIN_DIR` | `plugins.directory` | `/opt/praxis-plugins` |
-| `PRAXIS_GATE_EVIDENCE` | `gates.evidence.enabled` | `false` |
-| `PRAXIS_GATE_TEST` | `gates.test.enabled` | `false` |
-| `PRAXIS_GATE_FINAL` | `gates.final.enabled` | `false` |
-| `PRAXIS_COVERAGE_THRESHOLD` | `gates.test.coverage.threshold` | `90` |
+1. **Be specific in criteria descriptions.** Vague criteria produce vague verdicts.
+2. **One concern per criterion.** Don't bundle multiple requirements into one AC.
+3. **Keep TaskSpecs focused.** A single task should verify one logical unit of work.
+4. **Always set `human_approved: true`.** The kernel refuses to verify unapproved specs.
+5. **Review and update.** TaskSpecs are living documents — refine them as you learn what works.

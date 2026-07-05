@@ -1,179 +1,139 @@
 ---
 id: cli-reference
 title: CLI Reference
-description: Complete reference for the PRAXIS CLI commands, options, and flags.
+description: Complete reference for the PRAXIS CLI — init, spec, verify, repair, status, report.
 ---
 
-# CLI Reference 💻
+# CLI Reference
 
-## Overview
+The PRAXIS CLI is the primary interface for the Truth Kernel. It handles task definition, evidence collection, verification, repair, and reporting.
 
-The PRAXIS CLI is the primary interface for interacting with the runtime. It handles task execution, project management, and configuration.
+## Global Flags
 
-## Global Options
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--config` | Path to config file | `.praxis/config.yaml` |
-| `--verbose` | Enable verbose logging | `false` |
-| `--quiet` | Suppress non-error output | `false` |
-| `--no-color` | Disable colored output | `false` |
-| `-h, --help` | Show help | — |
-| `-V, --version` | Show version | — |
+| Flag | Description |
+|------|-------------|
+| `--help` | Show help for any command |
+| `--version` | Show PRAXIS version |
 
 ## Commands
 
-### `praxis init [name]`
+### `praxis init`
 
-Initialize a new PRAXIS project.
+Initialize a PRAXIS workspace in the current directory.
 
 ```bash
-praxis init my-project
-praxis init --existing     # Add to existing project
+praxis init
+```
+
+Creates `.praxis/task.yaml` (skeleton) and `.praxis/runs/` and `.praxis/reports/` directories. Safe to run multiple times — will not overwrite existing task specs.
+
+---
+
+### `praxis spec`
+
+Create or update a task specification.
+
+```bash
+praxis spec --description "Add a health check endpoint"
+praxis spec --file ./custom-task.yaml
 ```
 
 **Options:**
 | Flag | Description |
 |------|-------------|
-| `--existing` | Initialize in current directory |
-| `--template <name>` | Use a template (default, minimal, strict) |
-| `--yes` | Accept all defaults |
+| `--description <text>` | Task description (generates skeleton criteria) |
+| `--file <path>` | Load spec from a custom YAML file |
+
+The generated TaskSpec requires human approval (`human_approved: true`) before verification will proceed.
 
 ---
 
-### `praxis run [task-id]`
+### `praxis verify`
 
-Execute a task defined in a TaskSpec.
+Run the three verification gates against the current task.
 
 ```bash
-praxis run hello-world
-praxis run --parallel task-a task-b task-c
-praxis run --watch hello-world
+praxis verify
 ```
+
+The kernel collects evidence (git diff, command logs, test output) then runs EvidenceGate, ExecGate, and FinalGate. Output is a structured verdict with per-gate results.
+
+**Verdict values:**
+- **PASS** — All criteria met
+- **HOLD** — Some criteria need attention (evidence gaps, execution gaps)
+- **FAIL** — Task not complete
 
 **Options:**
 | Flag | Description |
 |------|-------------|
-| `--parallel` | Run multiple tasks concurrently |
-| `--watch` | Watch for changes and re-run |
-| `--timeout <seconds>` | Per-agent timeout (default: 300) |
-| `--agent <type>` | Agent type to use (openai, anthropic, local) |
-| `--max-workers <n>` | Max parallel agents (default: 3) |
+| `--gate <name>` | Run a specific gate only (evidence, exec, final) |
+| `--verbose` | Show detailed evidence for each gate |
+| `--json` | Output verdict as JSON |
 
 ---
 
-### `praxis verify [task-id]`
+### `praxis repair`
 
-Run verification gates on a previously executed task without re-executing.
+Generate a repair packet targeting failed verification criteria.
 
 ```bash
-praxis verify hello-world
+praxis repair
 ```
 
-**Options:**
-| Flag | Description |
-|------|-------------|
-| `--gate <name>` | Run specific gate (evidence, test, final) |
-| `--output <format>` | Output format (text, json, junit) |
+Outputs a structured RepairPacket listing each failed criterion, the issue detected, and a hint for fixing. Designed to be passed to a coding agent.
+
+Must be run after a failed `verify`.
 
 ---
 
-### `praxis status [task-id]`
+### `praxis status`
 
-Show the status of one or all tasks.
+Show the current state of the PRAXIS workspace.
 
 ```bash
 praxis status
-praxis status hello-world
 ```
+
+Displays:
+- Current task ID and description
+- Whether the TaskSpec is human-approved
+- Last verification verdict
+- Number of runs and reports
 
 **Options:**
 | Flag | Description |
 |------|-------------|
-| `--all` | Show all tasks (including completed) |
 | `--json` | Output as JSON |
 
 ---
 
-### `praxis plugin`
+### `praxis report`
 
-Manage PRAXIS plugins.
-
-```bash
-praxis plugin list
-praxis plugin install <name>
-praxis plugin remove <name>
-praxis plugin update <name>
-```
-
----
-
-### `praxis config`
-
-View or modify PRAXIS configuration.
+Generate a signed audit report for the last verification run.
 
 ```bash
-praxis config show
-praxis config set <key> <value>
-praxis config get <key>
+praxis report
 ```
 
----
-
-### `praxis doctor`
-
-Diagnose common issues in your PRAXIS setup.
-
-```bash
-praxis doctor
-```
-
-Checks:
-- PRAXIS version
-- Configuration file validity
-- Plugin compatibility
-- Required dependencies
-- Network connectivity
-
----
-
-### `praxis dashboard`
-
-Start the PRAXIS web dashboard.
-
-```bash
-praxis dashboard        # Start on default port (3000)
-praxis dashboard --port 8080
-```
-
----
-
-### `praxis update`
-
-Update PRAXIS to the latest version.
-
-```bash
-praxis update
-```
-
----
+Writes a markdown report to `.praxis/reports/<run-id>.md` containing:
+- Task ID and description
+- Per-gate results with evidence summaries
+- Overall verdict
+- Timestamp and run ID
 
 ## Exit Codes
 
 | Code | Meaning |
 |------|---------|
-| `0` | Success — all gates passed |
-| `1` | Error — execution failed |
-| `2` | Verification failed — one or more gates did not pass |
-| `3` | Configuration error |
-| `4` | Plugin error |
+| `0` | PASS — all gates passed |
+| `1` | FAIL — one or more gates failed |
+| `2` | HOLD — gates passed with gaps |
+| `3` | Error — execution failed (invalid config, missing task, etc.) |
 
 ## Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `PRAXIS_HOME` | PRAXIS data directory | `~/.praxis/` |
+| `PRAXIS_HOME` | PRAXIS data directory | `.praxis/` |
 | `PRAXIS_LOG_LEVEL` | Log level | `info` |
-| `PRAXIS_TIMEOUT` | Default task timeout (s) | `300` |
-| `PRAXIS_MAX_WORKERS` | Max parallel agents | `3` |
-| `PRAXIS_PLUGIN_DIR` | Plugin directory | `.praxis/plugins/` |
+| `PRAXIS_NO_COLOR` | Disable colored output | `false` |
